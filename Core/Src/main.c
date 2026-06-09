@@ -22,12 +22,16 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct{
+	char buf[32];
+	uint32_t tick;
+} MSGQUEUE_OBJ_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -92,7 +96,10 @@ void StartTask03(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int __io_putchar(int ch){
+	HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+	return ch;
+}
 /* USER CODE END 0 */
 
 /**
@@ -306,10 +313,17 @@ static void MX_GPIO_Init(void)
 void StartTask01(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	MSGQUEUE_OBJ_t msg;
+	strcpy(msg.buf, "Task 1 ");
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  osMutexAcquire(myMutex01Handle, osWaitForever);
+	  msg.tick=osKernelGetTickCount();
+	  osMessageQueuePut(myQueue01Handle, &msg, 0U, 0U);
+	  osMutexRelease(myMutex01Handle);
+
+	  osDelay(3000);
   }
   /* USER CODE END 5 */
 }
@@ -324,10 +338,17 @@ void StartTask01(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
+	MSGQUEUE_OBJ_t msg;
+	strcpy(msg.buf, "Task  2");
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  osMutexAcquire(myMutex01Handle, osWaitForever);
+	  msg.tick=osKernelGetTickCount();
+	  osMessageQueuePut(myQueue01Handle, &msg, 0U, 0U);
+	  osMutexRelease(myMutex01Handle);
+
+	  osDelay(5000);
   }
   /* USER CODE END StartTask02 */
 }
@@ -342,10 +363,18 @@ void StartTask02(void *argument)
 void StartTask03(void *argument)
 {
   /* USER CODE BEGIN StartTask03 */
+	MSGQUEUE_OBJ_t msg;
+	osStatus_t status;
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  status = osMessageQueueGet(myQueue01Handle, &msg, NULL, 0U); // wait for message
+
+	  if(status==osOK){
+		  printf("%s @ %5ld tick \r\n", msg.buf, msg.tick);
+
+		  osThreadYield();
+	  }
   }
   /* USER CODE END StartTask03 */
 }
